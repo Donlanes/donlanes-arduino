@@ -4,23 +4,24 @@
 
 const int RELAY_pin = 7;
 const int AC_pin = 5; // AC_pin detector
-const int s11_pin = 8;
+const int sevlev_button_pin = 8;
+const int LED_indicator_pin = 13;
 
-boolean s11_toggle = 0;
+boolean sevlev_action_pending = 0;
 
 void setup(){
   Serial.begin(9600);
   pinMode(RELAY_pin, OUTPUT);
   digitalWrite(RELAY_pin, LOW);
   pinMode(AC_pin, INPUT);
-  pinMode(s11_pin, INPUT);
-  digitalWrite(s11_pin, HIGH);
-  pinMode(13, OUTPUT);
-  
+  pinMode(sevlev_button_pin, INPUT);
+  digitalWrite(sevlev_button_pin, HIGH);
+  pinMode(LED_indicator_pin, OUTPUT);
+
 }
 void loop(){
   read_serial_cmd();
-  seven_eleven();
+  check_sevlev_press();
 }
 
 void read_serial_cmd() {
@@ -30,15 +31,15 @@ void read_serial_cmd() {
     if(incomingByte == '0') { // projector on
       set_projector(true);
     }
-    if(incomingByte == '1') { // projector off 
+    if(incomingByte == '1') { // projector off
       set_projector(false);
     }
     if(incomingByte == 'q') { // query AC_pin
       Serial.println(ac_state() ? "1" : "0");
     }
     if(incomingByte == '7'){
-      Serial.println(s11_toggle ? '7' : '0');
-      s11_toggle = 0;
+      Serial.println(sevlev_action_pending ? '7' : '0');
+      sevlev_action_pending = 0;
     }
   }
 }
@@ -53,12 +54,14 @@ void set_projector(bool desired_state) {
   delay(100);
 }
 
-void seven_eleven() {
-  digitalWrite(13, digitalRead(s11_pin));
+void check_sevlev_press() {
+  digitalWrite(LED_indicator_pin, digitalRead(sevlev_button_pin));
 
-  if (!digitalRead(s11_pin)) {
+  // Check whether the button pin is grounded for two samples 200ms apart.
+  // This should catch button presses longer than 200ms.
+  if (!digitalRead(sevlev_button_pin)) {
     delay(200);
-    if (!digitalRead(s11_pin))
-      s11_toggle = 1;
+    if (!digitalRead(sevlev_button_pin))
+      sevlev_action_pending = 1;
   }
 }
